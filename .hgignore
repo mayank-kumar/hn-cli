@@ -1,0 +1,7 @@
+^Debug/
+^rapidjson/
+^Release/
+\.opensdf$
+\.sdf$
+\.suo$
+\.user$

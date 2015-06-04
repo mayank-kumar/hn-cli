@@ -46,6 +46,6 @@ namespace hackernewscmd {
 		StateManager& mStateManager;
 
 		void ThreadCallback();
-		void ProcessInput(const std::wstring&);
+		void ProcessActions(const std::vector<InputAction>&);
 	};
 } // namespace hackernewscmd

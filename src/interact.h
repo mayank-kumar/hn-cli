@@ -21,13 +21,30 @@
 
 #include <Windows.h>
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 #include "story.h"
 
 
 namespace hackernewscmd {
+	enum class InputAction {
+		Unknown,
+
+		NextStory,
+		NextStorySkip,
+		PrevStory,
+		PrevStorySkip,
+
+		NextPage,
+		NextPageSkip,
+		PrevPage,
+		PrevPageSkip,
+
+		OpenStory,
+		RefreshStories,
+		Quit
+	};
+
 	struct StoryDisplayData {
 		SMALL_RECT margin;
 		SMALL_RECT text;
@@ -45,6 +62,7 @@ namespace hackernewscmd {
 		void SwapSelectedStories(const StoryDisplayData&, const StoryDisplayData&) const;
 		void ClearScreen() const;
 		std::wstring ReadChars() const;
+		std::vector<InputAction> ReadActions() const;
 
 		static const Interact& GetInstance();
 	private:

@@ -44,47 +44,51 @@ namespace hackernewscmd {
 
 	void InputManager::ThreadCallback() {
 		for (;;) {
-			ProcessInput(mInteract.ReadChars());
+			ProcessActions(mInteract.ReadActions());
 			if (mInputState == InputState::Quit) {
 				break;
 			}
 		}
 	}
 
-	void InputManager::ProcessInput(const std::wstring& input) {
-		for (const auto c : input) {
-			switch (::tolower(c)) {
-
-			// Page navigation
-			case 's':
-				mStateManager.GotoNextPage(true);
-				return;
-			case '\t':
-				mStateManager.GotoNextPage(false);
-				return;
-			case '\b':
-				mStateManager.GotoPrevPage(false);
-				return;
-
-			// Story navigation
-			case 'n':
+	void InputManager::ProcessActions(const std::vector<InputAction>& actions) {
+		using IA = InputAction;
+		for (const auto action : actions) {
+			switch (action) {
+			case IA::NextStory:
 				mStateManager.SelectNextStory(false);
-				return;
-			case 'p':
+				break;
+			case IA::NextStorySkip:
+				mStateManager.SelectNextStory(true);
+				break;
+			case IA::PrevStory:
 				mStateManager.SelectPrevStory(false);
-				return;
-
-			// Other controls
-			case '\r':
+				break;
+			case IA::PrevStorySkip:
+				mStateManager.SelectPrevStory(true);
+				break;
+			case IA::NextPage:
+				mStateManager.GotoNextPage(false);
+				break;
+			case IA::NextPageSkip:
+				mStateManager.GotoNextPage(true);
+				break;
+			case IA::PrevPage:
+				mStateManager.GotoPrevPage(false);
+				break;
+			case IA::PrevPageSkip:
+				mStateManager.GotoPrevPage(true);
+				break;
+			case IA::OpenStory:
 				mStateManager.OpenSelectedStoryUrl();
-				return;
-			case 'q':
+				break;
+			case IA::RefreshStories:
+				// TODO
+				break;
+			case IA::Quit:
 				mInputState = InputState::Quit;
 				mStateManager.Quit();
 				return;
-
-			default:
-				break;
 			}
 		}
 	}

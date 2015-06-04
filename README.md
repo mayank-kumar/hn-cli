@@ -6,15 +6,17 @@
 - Launch any story in the default browser
 
 ### Usage
-The interface is still somewhat cruddy, but here are the basics:
+The interface is ~~still somewhat cruddy~~ getting better. Here are the basics:
 - There are 10 articles on a page
 - The active article has an asterisk to its left
-- Press 'n' to go to the next story
-- Press 'tab' to go to the next page
-- Press 'p' to go to the previous story
-- Press 'backspace' to go to the previous page
-- Press 's' to go to the next page **and skip the stories on the current page**
-- Press 'enter' to launch the article in the system default browser
+- Press the arrow keys to navigate without skipping:
+  - top and down to move between stories
+  - left and right to move between pages
+- Press 'enter' to launch the active article in the system default browser
+- Press 'n' to go to the next story and mark the current one skipped
+- Press 'p' to go to the previous story and mark the current one skipped
+- Press 'page down' to go to the next page and mark all stories on the current page skipped
+- Press 'page up' to go to the previous page and mark all stories on the current page skipped
 - Press 'q' to quit
 
 ### To build

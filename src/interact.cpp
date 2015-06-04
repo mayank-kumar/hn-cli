@@ -125,6 +125,74 @@ namespace hackernewscmd {
 		return result;
 	}
 
+	std::vector<InputAction> Interact::ReadActions() const {
+		std::vector<InputAction> actions;
+
+		auto insertAtEnd = [&actions](const KEY_EVENT_RECORD& event, InputAction action) {
+			actions.insert(actions.end(), event.wRepeatCount, action);
+		};
+
+		const auto bufferSize = 128UL;
+		auto eventsRead = 0UL;
+		INPUT_RECORD buff[bufferSize];
+
+		while (actions.empty()) {
+			if (!::ReadConsoleInputW(mInputHandle, buff, bufferSize, &eventsRead)) {
+				throw std::runtime_error("Couldn't read input buffer");
+			}
+
+			for (auto i = 0UL; i < eventsRead; ++i) {
+				auto& item = buff[i];
+				if (item.EventType != KEY_EVENT || !item.Event.KeyEvent.bKeyDown) {
+					continue;
+				}
+				auto& event = item.Event.KeyEvent;
+				if (event.uChar.UnicodeChar) {
+					switch (::tolower(event.uChar.UnicodeChar)) {
+					case '\r':
+						insertAtEnd(event, InputAction::OpenStory);
+						break;
+					case 'n':
+						insertAtEnd(event, InputAction::NextStorySkip);
+						break;
+					case 'p':
+						insertAtEnd(event, InputAction::PrevStorySkip);
+						break;
+					case 'q':
+						insertAtEnd(event, InputAction::Quit);
+						break;
+					}
+				} else {
+					switch (event.wVirtualKeyCode) {
+					case VK_DOWN:
+						insertAtEnd(event, InputAction::NextStory);
+						break;
+					case VK_F5:
+						insertAtEnd(event, InputAction::RefreshStories);
+						break;
+					case VK_LEFT:
+						insertAtEnd(event, InputAction::PrevPage);
+						break;
+					case VK_NEXT:
+						insertAtEnd(event, InputAction::NextPageSkip);
+						break;
+					case VK_PRIOR:
+						insertAtEnd(event, InputAction::PrevPageSkip);
+						break;
+					case VK_RIGHT:
+						insertAtEnd(event, InputAction::NextPage);
+						break;
+					case VK_UP:
+						insertAtEnd(event, InputAction::PrevStory);
+						break;
+					}
+				}
+			}
+		}
+
+		return actions;
+	}
+
 	std::unique_ptr<Interact> Interact::mInstance = nullptr;
 	const Interact& Interact::GetInstance() {
 		if (mInstance == nullptr) {

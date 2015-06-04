@@ -158,6 +158,13 @@ namespace hackernewscmd {
 		if (index < indices.first || index >= indices.second) {
 			// Load the required page
 			GotoPage(index / kDisplayPageSize, false);
+		} else {
+			// Don't move the selection if there'll be no indication on the console
+			for (auto it = mPagedDisplayBuffer.cbegin() + indices.first; it != mPagedDisplayBuffer.cbegin() + indices.second; ++it) {
+				if (it->second != StoryLoadStatus::Completed) {
+					return;
+				}
+			}
 		}
 
 		// Wait if a prior instruction is pending a read by the display thread

@@ -86,9 +86,19 @@ namespace hackernewscmd {
 	}
 
 	void StateManager::OpenSelectedStoryUrl() {
-		if (reinterpret_cast<int>(::ShellExecuteW(NULL, NULL, mPagedDisplayBuffer[mCurrentSelectedStoryIndex].first.url.c_str(), NULL, NULL, SW_SHOWNORMAL)) <= 32) {
+		const wchar_t* url = nullptr;
+		std::wstring urlBackup;
+		auto& story = mPagedDisplayBuffer[mCurrentSelectedStoryIndex].first;
+		if (story.url.length()) {
+			url = story.url.c_str();
+		} else {
+			urlBackup = GetStoryPageUrl(story);
+			url = urlBackup.c_str();
+		}
+		if (reinterpret_cast<int>(::ShellExecuteW(NULL, NULL, url, NULL, NULL, SW_SHOWNORMAL)) <= 32) {
 			throw std::runtime_error("Couldn't open browser");
 		}
+		mSkippedStories->insert(story.id);
 	}
 
 	void StateManager::Quit() {
@@ -118,12 +128,16 @@ namespace hackernewscmd {
 
 	void StateManager::DiffTopStories() {
 		decltype(mTopStories) newTopStories;
+		std::unordered_set<StoryId> newSkippedStories;
 		for (const auto& story : mTopStories) {
-			if (!mSkippedStories->count(story)) {
+			if (mSkippedStories->find(story) == mSkippedStories->end()) {
 				newTopStories.emplace_back(story);
+			} else {
+				newSkippedStories.insert(story);
 			}
 		}
 		mTopStories.swap(newTopStories);
+		mSkippedStories->swap(newSkippedStories);
 	}
 
 	void StateManager::GotoPage(const long page, const bool skipCurr) {
@@ -177,6 +191,11 @@ namespace hackernewscmd {
 		SetupDisplayThreadDataForSelectedStory(index);
 		mDisplayCV.notify_all();
 		mCurrentSelectedStoryIndex = index;
+	}
+
+	const std::wstring StateManager::kHackerNewsItemUrl = L"https://news.ycombinator.com/item?id=";
+	std::wstring StateManager::GetStoryPageUrl(const Story& story) {
+		return kHackerNewsItemUrl + std::to_wstring(story.id);
 	}
 
 	void StateManager::FetchDisplayPage(const PageIndices& indices) {

@@ -80,6 +80,8 @@ namespace hackernewscmd {
 		void GotoPage(const long, const bool);
 		void SelectStory(const std::size_t, const bool);
 
+		static std::wstring GetStoryPageUrl(const Story&);
+
 		using PageIndices = std::pair < std::size_t, std::size_t >;
 		void FetchDisplayPage(const PageIndices&);
 		void DisplayPage(const PageIndices&);
@@ -90,5 +92,6 @@ namespace hackernewscmd {
 
 		static std::unique_ptr<StateManager> mInstance;
 		static const std::size_t kDisplayPageSize = 10;
+		static const std::wstring kHackerNewsItemUrl;
 	}; // class SateManager
 } // hnamespace hackernewscmd

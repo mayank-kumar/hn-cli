@@ -46,15 +46,18 @@ namespace hackernewscmd {
 		}
 	}
 
-	std::vector<unsigned long long> NewsFetcher::FetchTopStoryIds() {
+	std::vector<StoryId> NewsFetcher::FetchTopStoryIds() {
 		auto topStoriesJson = FetchUrl(kBaseUrl + kTopStories);
 		rapidjson::GenericDocument<rapidjson::UTF16<>> document;
 		if (document.Parse(&topStoriesJson[0]).HasParseError() || !document.IsArray()) {
 			throw std::runtime_error("Error while parsing response JSON");
 		}
-		std::vector<unsigned long long> topStoryIds(document.Size());
+		std::vector<StoryId> topStoryIds;
+		topStoryIds.reserve(document.Size());
 		for (long long i = 0; i < document.Size(); ++i) {
-			topStoryIds[i] = document[i].GetUint64();
+			if (!document[i].IsNull()) {
+				topStoryIds.emplace_back(document[i].GetUint64());
+			}
 		}
 		return topStoryIds;
 	}

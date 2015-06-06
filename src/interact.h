@@ -21,9 +21,9 @@
 
 #include <Windows.h>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
-#include "story.h"
 
 
 namespace hackernewscmd {
@@ -48,6 +48,7 @@ namespace hackernewscmd {
 	struct StoryDisplayData {
 		SMALL_RECT margin;
 		SMALL_RECT text;
+		SMALL_RECT addendum;
 	};
 
 	class Interact {
@@ -58,7 +59,7 @@ namespace hackernewscmd {
 		Interact(const Interact&) = delete;
 		Interact& operator=(const Interact&) = delete;
 
-		StoryDisplayData ShowStory(const Story&) const;
+		StoryDisplayData ShowStory(const std::wstring&, const unsigned, const std::wstring&) const;
 		void SwapSelectedStories(const StoryDisplayData&, const StoryDisplayData&) const;
 		void ClearScreen() const;
 		std::wstring ReadChars() const;
@@ -68,12 +69,14 @@ namespace hackernewscmd {
 	private:
 		Interact();
 		void Init();
+		short PrintLineWithinCols(const std::wstring&, short, short, short) const;
 
 		HANDLE mInputHandle;
 		HANDLE mOutputHandle;
 		HANDLE mOriginalOutputHandle;
-		COORD mBufferSize;
+		mutable COORD mBufferSize;
 		unsigned short mBufferAttributes;
+		mutable short mNextRow;
 		static std::unique_ptr<Interact> mInstance;
 	}; // class Interact
 } // namespace hackernewscmd

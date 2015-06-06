@@ -80,12 +80,13 @@ namespace hackernewscmd {
 		std::unique_lock<std::mutex> mLock;
 		std::thread mDisplayThread;
 		DisplayThreadData *mThreadData;
-		std::unordered_map<Story, StoryDisplayData> mDisplayData;
+		std::unordered_map<StoryId, StoryDisplayData> mDisplayData;
 		const Story *mCurrentlySelectedStory;
 		const Story *mToBeSelectedStory;
 
 		void ThreadCallback();
 		bool TryReadNewInstruction();
 		bool ShouldBreak() const;
+		static std::wstring GetHostNameFromUrl(const std::wstring&);
 	}; // class DisplayManager
 } // namespace hackernewscmd

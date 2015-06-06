@@ -86,7 +86,7 @@ namespace hackernewscmd {
 	}
 
 	void StateManager::OpenSelectedStoryUrl() {
-		if ((*::ShellExecuteW(NULL, NULL, mPagedDisplayBuffer[mCurrentSelectedStoryIndex].first.url.c_str(), NULL, NULL, SW_SHOWNORMAL)).unused <= 32) {
+		if (reinterpret_cast<int>(::ShellExecuteW(NULL, NULL, mPagedDisplayBuffer[mCurrentSelectedStoryIndex].first.url.c_str(), NULL, NULL, SW_SHOWNORMAL)) <= 32) {
 			throw std::runtime_error("Couldn't open browser");
 		}
 	}
@@ -158,7 +158,7 @@ namespace hackernewscmd {
 		if (index < indices.first || index >= indices.second) {
 			// Load the required page
 			GotoPage(index / kDisplayPageSize, false);
-		} else {
+		} else if (mCurrentSelectedStoryIndex >= indices.first && mCurrentSelectedStoryIndex < indices.second) {
 			// Don't move the selection if there'll be no indication on the console
 			for (auto it = mPagedDisplayBuffer.cbegin() + indices.first; it != mPagedDisplayBuffer.cbegin() + indices.second; ++it) {
 				if (it->second != StoryLoadStatus::Completed) {

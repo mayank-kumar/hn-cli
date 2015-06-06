@@ -42,23 +42,7 @@ namespace hackernewscmd {
 		unsigned descendants;
 		time_t time;
 		std::wstring by;
-
-		/**
-		Should be used only for unordered_map/unordered_set
-		*/
-		bool operator==(const Story& other) const {
-			return id == other.id;
-		}
 	}; // struct Story
 
 	using StoryAndStatus = std::pair < Story, StoryLoadStatus >;
 } // namespace hackernewscmd
-
-namespace std {
-	using Story = hackernewscmd::Story;
-	template<> struct hash < Story > {
-		size_t operator()(const Story& story) const {
-			return static_cast<size_t>(story.id);
-		}
-	};
-} // namespace std

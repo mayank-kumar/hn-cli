@@ -18,6 +18,7 @@
 
 
 #include "display_manager.h"
+#include <WinInet.h>
 
 
 namespace hackernewscmd {
@@ -70,7 +71,8 @@ namespace hackernewscmd {
 					if (TryReadNewInstruction() && (shouldRedo = ShouldBreak()) == true) {
 						break;
 					}
-					mDisplayData[iter->first] = mInteract.ShowStory(iter->first);
+					auto& story = iter->first;
+					mDisplayData[story.id] = mInteract.ShowStory(story.title, story.score, GetHostNameFromUrl(story.url));
 				}
 				if (shouldRedo) {
 					break;
@@ -78,14 +80,14 @@ namespace hackernewscmd {
 				if (mToBeSelectedStory == nullptr) {
 					mToBeSelectedStory = mCurrentlySelectedStory;
 				}
-				mInteract.SwapSelectedStories(mDisplayData[*mCurrentlySelectedStory], mDisplayData[*mToBeSelectedStory]);
+				mInteract.SwapSelectedStories(mDisplayData[mCurrentlySelectedStory->id], mDisplayData[mToBeSelectedStory->id]);
 				mCurrentlySelectedStory = mToBeSelectedStory;
 				break;
 			}
 			case DisplayThreadData::SelectStory: {
 				auto data = mThreadData->GetActionData<DisplayThreadData::SelectStory, Story>();
-				if (mDisplayData.count(*data)) {
-					mInteract.SwapSelectedStories(mDisplayData[*mCurrentlySelectedStory], mDisplayData[*data]);
+				if (mDisplayData.count(data->id)) {
+					mInteract.SwapSelectedStories(mDisplayData[mCurrentlySelectedStory->id], mDisplayData[data->id]);
 					mCurrentlySelectedStory = data;
 				}
 				break;
@@ -119,5 +121,23 @@ namespace hackernewscmd {
 		auto action = mThreadData->action;
 		return action == DisplayThreadData::Action::DisplayPage
 			|| action == DisplayThreadData::Action::Quit;
+	}
+
+	std::wstring DisplayManager::GetHostNameFromUrl(const std::wstring& url)
+	{
+		URL_COMPONENTSW uc{};
+		uc.dwStructSize = sizeof(uc);
+
+		const auto buffer_size = 4096;
+		wchar_t buff[buffer_size];
+		uc.lpszHostName = buff;
+		uc.dwHostNameLength = buffer_size;
+
+		if (!::InternetCrackUrlW(url.c_str(), url.length(), ICU_DECODE, &uc)) {
+			// Couldn't extract hostname
+			return url;
+		}
+
+		return std::wstring(buff);
 	}
 } // namespace hackernewscmd

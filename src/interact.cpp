@@ -19,6 +19,7 @@
 
 #include "interact.h"
 #include <algorithm>
+#include <cassert>
 #include <cstdlib>
 #include <stdexcept>
 
@@ -26,7 +27,11 @@
 
 
 namespace hackernewscmd {
-	Interact::Interact() : mInputHandle(NULL), mOutputHandle(NULL), mOriginalOutputHandle(NULL) {}
+	Interact::Interact() :
+		mInputHandle(NULL),
+		mOutputHandle(NULL),
+		mOriginalOutputHandle(NULL),
+		mNextRow(0) {}
 
 	Interact::~Interact() {
 		::SetConsoleActiveScreenBuffer(mOriginalOutputHandle);
@@ -58,9 +63,14 @@ namespace hackernewscmd {
 		}
 		mBufferSize = csbi.dwSize;
 		mBufferAttributes = csbi.wAttributes;
+
+		CONSOLE_CURSOR_INFO cci{ 1, false };
+		if (!::SetConsoleCursorInfo(mOutputHandle, &cci)) {
+			throw std::runtime_error("Couldn't hide cursor " + std::to_string(::GetLastError()));
+		}
 	}
 
-	StoryDisplayData Interact::ShowStory(const Story& story) const {
+	StoryDisplayData Interact::ShowStory(const std::wstring& title, const unsigned score, const std::wstring& host) const {
 		StoryDisplayData sdd;
 
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -68,24 +78,20 @@ namespace hackernewscmd {
 			throw std::runtime_error("Couldn't load screen buffer info");
 		}
 
-		auto currentY = sdd.margin.Top = sdd.text.Top = csbi.dwCursorPosition.Y;
+		sdd.margin.Top = sdd.text.Top = mNextRow;
 		sdd.margin.Left = 0;
 		sdd.margin.Right = 2;
-		sdd.text.Left = 3;
-		sdd.text.Right = mBufferSize.X;
+		sdd.text.Left = sdd.addendum.Left = 3;
+		sdd.text.Right = sdd.addendum.Right = mBufferSize.X;
 
-		auto textWidth = mBufferSize.X - 2;
-		for (std::size_t i = 0; i < story.title.length(); i += textWidth, ++currentY) {
-			auto length = std::min(i + textWidth, story.title.length()) - i;
-			unsigned long charsWritten;
-			if (::WriteConsoleOutputCharacterW(mOutputHandle, story.title.c_str() + i, length, { 2, currentY }, &charsWritten) == 0) {
-				throw std::runtime_error("Couldn't write characters");
-			}
-		}
+		mNextRow = PrintLineWithinCols(title, mNextRow, 2, mBufferSize.X - 1);
+		sdd.text.Bottom = mNextRow - 1;
 
-		sdd.margin.Bottom = sdd.text.Bottom = currentY - 1;
+		sdd.addendum.Top = mNextRow;
+		mNextRow = PrintLineWithinCols(L'[' + std::to_wstring(score) + L"] " + host, mNextRow, 2, mBufferSize.X - 1);
+		sdd.margin.Bottom = sdd.addendum.Bottom = mNextRow - 1;
 
-		::SetConsoleCursorPosition(mOutputHandle, { 0, currentY + 1 });
+		++mNextRow;
 
 		return sdd;
 	}
@@ -95,6 +101,9 @@ namespace hackernewscmd {
 		if (::WriteConsoleOutputCharacterW(mOutputHandle, L" ", 1, { prev.margin.Left, prev.margin.Top }, &charsWritten) == 0
 			|| ::WriteConsoleOutputCharacterW(mOutputHandle, L"*", 1, { curr.margin.Left, curr.margin.Top }, &charsWritten) == 0) {
 			throw std::runtime_error("Couldn't write character");
+		}
+		if (!::SetConsoleCursorPosition(mOutputHandle, { 0, curr.addendum.Bottom })) {
+			throw std::runtime_error("Couldn't move cursor to location of story");
 		}
 	}
 
@@ -109,6 +118,7 @@ namespace hackernewscmd {
 			throw std::runtime_error("Couldn't set attributes for screen buffer");
 		}
 		::SetConsoleCursorPosition(mOutputHandle, root);
+		mNextRow = 0;
 	}
 
 	std::wstring Interact::ReadChars() const {
@@ -191,6 +201,32 @@ namespace hackernewscmd {
 		}
 
 		return actions;
+	}
+
+	short Interact::PrintLineWithinCols(const std::wstring& line, short row, short left, short right) const {
+		assert(left <= right);
+
+		if (!line.length()) {
+			return row;
+		}
+
+		auto width = right - left + 1;
+		auto numLines = short(row + (line.length() - 1) / width + 1);
+		if (numLines > mBufferSize.Y) {
+			if (!::SetConsoleScreenBufferSize(mOutputHandle, { mBufferSize.X, numLines })) {
+				throw std::runtime_error("Couldn't create space for line");
+			}
+			mBufferSize.Y = numLines;
+		}
+
+		for (std::size_t i = 0; i < line.length(); i += width, ++row) {
+			auto length = std::min(i + width, line.length()) - i;
+			unsigned long charsWritten;
+			if (!::WriteConsoleOutputCharacterW(mOutputHandle, line.c_str() + i, length, { left, row }, &charsWritten)) {
+				throw std::runtime_error("Couldn't write characters");
+			}
+		}
+		return row;
 	}
 
 	std::unique_ptr<Interact> Interact::mInstance = nullptr;

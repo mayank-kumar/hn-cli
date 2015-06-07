@@ -41,6 +41,7 @@ namespace hackernewscmd {
 		PrevPageSkip,
 
 		OpenStory,
+		OpenStoryPage,
 		RefreshStories,
 		Quit
 	};
@@ -59,7 +60,11 @@ namespace hackernewscmd {
 		Interact(const Interact&) = delete;
 		Interact& operator=(const Interact&) = delete;
 
+		// Without comments
 		StoryDisplayData ShowStory(const std::wstring&, const unsigned, const std::wstring&) const;
+		// With comments
+		StoryDisplayData ShowStory(const std::wstring&, const unsigned, const std::wstring&, const unsigned) const;
+
 		void SwapSelectedStories(const StoryDisplayData&, const StoryDisplayData&) const;
 		void ClearScreen() const;
 		std::wstring ReadChars() const;
@@ -69,14 +74,18 @@ namespace hackernewscmd {
 	private:
 		Interact();
 		void Init();
+		StoryDisplayData ShowStoryInternal(const std::wstring&, const unsigned, const std::wstring&, const long) const;
 		short PrintLineWithinCols(const std::wstring&, short, short, short) const;
+		void ChangeBufferAttributes(const SMALL_RECT&, unsigned short) const;
 
 		HANDLE mInputHandle;
 		HANDLE mOutputHandle;
 		HANDLE mOriginalOutputHandle;
 		mutable COORD mBufferSize;
 		unsigned short mBufferAttributes;
+		unsigned short mSelectedStoryAttributes;
 		mutable short mNextRow;
+		mutable std::vector<CHAR_INFO> mRowBuffer;
 		static std::unique_ptr<Interact> mInstance;
 	}; // class Interact
 } // namespace hackernewscmd

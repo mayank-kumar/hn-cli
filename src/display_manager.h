@@ -83,6 +83,7 @@ namespace hackernewscmd {
 		std::unordered_map<StoryId, StoryDisplayData> mDisplayData;
 		const Story *mCurrentlySelectedStory;
 		const Story *mToBeSelectedStory;
+		const bool mShouldDisplayCommentCount;
 
 		void ThreadCallback();
 		bool TryReadNewInstruction();

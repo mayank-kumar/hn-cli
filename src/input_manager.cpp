@@ -80,7 +80,10 @@ namespace hackernewscmd {
 				mStateManager.GotoPrevPage(true);
 				break;
 			case IA::OpenStory:
-				mStateManager.OpenSelectedStoryUrl();
+				mStateManager.OpenSelectedStory(false);
+				break;
+			case IA::OpenStoryPage:
+				mStateManager.OpenSelectedStory(true);
 				break;
 			case IA::RefreshStories:
 				// TODO

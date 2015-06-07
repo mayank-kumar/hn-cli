@@ -85,20 +85,24 @@ namespace hackernewscmd {
 		SelectStory(mCurrentSelectedStoryIndex - 1, skipCurr);
 	}
 
-	void StateManager::OpenSelectedStoryUrl() {
+	void StateManager::OpenSelectedStory(bool shouldOpenComments) {
 		const wchar_t* url = nullptr;
-		std::wstring urlBackup;
+		std::wstring urlComments;
+
 		auto& story = mPagedDisplayBuffer[mCurrentSelectedStoryIndex].first;
-		if (story.url.length()) {
+		if (!shouldOpenComments && story.url.length()) {
 			url = story.url.c_str();
 		} else {
-			urlBackup = GetStoryPageUrl(story);
-			url = urlBackup.c_str();
+			urlComments = GetStoryPageUrl(story);
+			url = urlComments.c_str();
 		}
 		if (reinterpret_cast<int>(::ShellExecuteW(NULL, NULL, url, NULL, NULL, SW_SHOWNORMAL)) <= 32) {
 			throw std::runtime_error("Couldn't open browser");
 		}
-		mSkippedStories->insert(story.id);
+
+		if (!shouldOpenComments) {
+			mSkippedStories->insert(story.id);
+		}
 	}
 
 	void StateManager::Quit() {

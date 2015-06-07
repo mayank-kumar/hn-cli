@@ -47,7 +47,7 @@ namespace hackernewscmd {
 		void GotoPrevPage(bool);
 		void SelectNextStory(bool);
 		void SelectPrevStory(bool);
-		void OpenSelectedStoryUrl();
+		void OpenSelectedStory(bool);
 		void Quit();
 		static StateManager& GetInstance();
 

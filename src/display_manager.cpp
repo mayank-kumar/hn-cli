@@ -28,7 +28,8 @@ namespace hackernewscmd {
 		mStateManagerCV(nullptr),
 		mThreadData(nullptr),
 		mCurrentlySelectedStory(nullptr),
-		mToBeSelectedStory(nullptr) {};
+		mToBeSelectedStory(nullptr),
+		mShouldDisplayCommentCount(true) {};
 
 	DisplayManager::~DisplayManager() {
 		if (mDisplayThread.joinable()) {
@@ -72,7 +73,11 @@ namespace hackernewscmd {
 						break;
 					}
 					auto& story = iter->first;
-					mDisplayData[story.id] = mInteract.ShowStory(story.title, story.score, GetHostNameFromUrl(story.url));
+					if (mShouldDisplayCommentCount) {
+						mDisplayData[story.id] = mInteract.ShowStory(story.title, story.score, GetHostNameFromUrl(story.url), story.descendants);
+					} else {
+						mDisplayData[story.id] = mInteract.ShowStory(story.title, story.score, GetHostNameFromUrl(story.url));
+					}
 				}
 				if (shouldRedo) {
 					break;

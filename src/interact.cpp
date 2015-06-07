@@ -62,7 +62,9 @@ namespace hackernewscmd {
 			throw std::runtime_error("Couldn't load screen buffer info");
 		}
 		mBufferSize = csbi.dwSize;
-		mBufferAttributes = csbi.wAttributes;
+		mBufferAttributes = csbi.wAttributes & ~FOREGROUND_INTENSITY;
+		mSelectedStoryAttributes = csbi.wAttributes | FOREGROUND_INTENSITY;
+		mRowBuffer.resize(csbi.dwSize.X);
 
 		CONSOLE_CURSOR_INFO cci{ 1, false };
 		if (!::SetConsoleCursorInfo(mOutputHandle, &cci)) {
@@ -71,38 +73,32 @@ namespace hackernewscmd {
 	}
 
 	StoryDisplayData Interact::ShowStory(const std::wstring& title, const unsigned score, const std::wstring& host) const {
-		StoryDisplayData sdd;
+		return ShowStoryInternal(title, score, host, -1);
+	}
 
-		CONSOLE_SCREEN_BUFFER_INFO csbi;
-		if (::GetConsoleScreenBufferInfo(mOutputHandle, &csbi) == 0) {
-			throw std::runtime_error("Couldn't load screen buffer info");
-		}
-
-		sdd.margin.Top = sdd.text.Top = mNextRow;
-		sdd.margin.Left = 0;
-		sdd.margin.Right = 2;
-		sdd.text.Left = sdd.addendum.Left = 3;
-		sdd.text.Right = sdd.addendum.Right = mBufferSize.X;
-
-		mNextRow = PrintLineWithinCols(title, mNextRow, 2, mBufferSize.X - 1);
-		sdd.text.Bottom = mNextRow - 1;
-
-		sdd.addendum.Top = mNextRow;
-		mNextRow = PrintLineWithinCols(L'[' + std::to_wstring(score) + L"] " + host, mNextRow, 2, mBufferSize.X - 1);
-		sdd.margin.Bottom = sdd.addendum.Bottom = mNextRow - 1;
-
-		++mNextRow;
-
-		return sdd;
+	StoryDisplayData Interact::ShowStory(const std::wstring& title, const unsigned score, const std::wstring& host, const unsigned comments) const {
+		return ShowStoryInternal(title, score, host, comments);
 	}
 
 	void Interact::SwapSelectedStories(const StoryDisplayData& prev, const StoryDisplayData& curr) const {
+		// Move asterisk
 		unsigned long charsWritten;
 		if (::WriteConsoleOutputCharacterW(mOutputHandle, L" ", 1, { prev.margin.Left, prev.margin.Top }, &charsWritten) == 0
 			|| ::WriteConsoleOutputCharacterW(mOutputHandle, L"*", 1, { curr.margin.Left, curr.margin.Top }, &charsWritten) == 0) {
 			throw std::runtime_error("Couldn't write character");
 		}
-		if (!::SetConsoleCursorPosition(mOutputHandle, { 0, curr.addendum.Bottom })) {
+
+		// Recolor
+		SMALL_RECT rect = prev.text;
+		rect.Bottom = prev.addendum.Bottom;
+		ChangeBufferAttributes(rect, mBufferAttributes);
+		rect = curr.text;
+		rect.Bottom = curr.addendum.Bottom;
+		ChangeBufferAttributes(rect, mSelectedStoryAttributes);
+
+		// Scroll
+		if (!::SetConsoleCursorPosition(mOutputHandle, { 0, curr.addendum.Bottom })
+			|| !::SetConsoleCursorPosition(mOutputHandle, { 0, curr.text.Top })) {
 			throw std::runtime_error("Couldn't move cursor to location of story");
 		}
 	}
@@ -162,6 +158,9 @@ namespace hackernewscmd {
 					case '\r':
 						insertAtEnd(event, InputAction::OpenStory);
 						break;
+					case 'c':
+						insertAtEnd(event, InputAction::OpenStoryPage);
+						break;
 					case 'n':
 						insertAtEnd(event, InputAction::NextStorySkip);
 						break;
@@ -201,6 +200,60 @@ namespace hackernewscmd {
 		}
 
 		return actions;
+	}
+
+	StoryDisplayData Interact::ShowStoryInternal(const std::wstring& title, const unsigned score, const std::wstring& hostname, const long comments) const {
+		StoryDisplayData sdd;
+
+		CONSOLE_SCREEN_BUFFER_INFO csbi;
+		if (::GetConsoleScreenBufferInfo(mOutputHandle, &csbi) == 0) {
+			throw std::runtime_error("Couldn't load screen buffer info");
+		}
+
+		sdd.margin.Top = sdd.text.Top = mNextRow;
+		sdd.margin.Left = 0;
+		sdd.margin.Right = 1;
+		sdd.text.Left = sdd.addendum.Left = 2;
+		sdd.text.Right = sdd.addendum.Right = mBufferSize.X;
+
+		mNextRow = PrintLineWithinCols(title, mNextRow, 2, mBufferSize.X - 1);
+		sdd.text.Bottom = mNextRow - 1;
+
+		sdd.addendum.Top = mNextRow;
+		auto addendum = L'[' + std::to_wstring(score) + L"] " + hostname;
+		if (comments > 0) {
+			addendum += L" [" + std::to_wstring(comments) + (comments == 1 ? L" comment" : L" comments") + L']';
+		}
+		mNextRow = PrintLineWithinCols(addendum, mNextRow, 2, mBufferSize.X - 1);
+		sdd.margin.Bottom = sdd.addendum.Bottom = mNextRow - 1;
+
+		++mNextRow;
+
+		return sdd;
+	}
+
+	void Interact::ChangeBufferAttributes(const SMALL_RECT& region, unsigned short attributes) const {
+		auto size = short(region.Right - region.Left + 1);
+		if (size > short(mRowBuffer.size())) {
+			mRowBuffer.resize(size);
+		}
+		COORD root{ 0, 0 };
+		COORD dim{ size, 1 };
+		SMALL_RECT temp;
+		for (auto i = region.Top; i <= region.Bottom; ++i) {
+			temp.Top = temp.Bottom = i;
+			temp.Left = region.Left;
+			temp.Right = region.Right;
+			if (!::ReadConsoleOutputW(mOutputHandle, mRowBuffer.data(), dim, root, &temp)) {
+				throw std::runtime_error("Couldn't read output characters");
+			}
+			for (auto i = 0; i < size; ++i) {
+				mRowBuffer[i].Attributes = attributes;
+			}
+			if (!::WriteConsoleOutputW(mOutputHandle, mRowBuffer.data(), dim, root, &temp)) {
+				throw std::runtime_error("Couldn't write output characters");
+			}
+		}
 	}
 
 	short Interact::PrintLineWithinCols(const std::wstring& line, short row, short left, short right) const {

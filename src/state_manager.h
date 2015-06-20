@@ -84,8 +84,8 @@ namespace hackernewscmd {
 
 		using PageIndices = std::pair < std::size_t, std::size_t >;
 		void FetchDisplayPage(const PageIndices&);
-		void DisplayPage(const PageIndices&);
-		void SetupDisplayThreadDataForPageDisplay(const PageIndices&);
+		void DisplayPage(const PageIndices&, long);
+		void SetupDisplayThreadDataForPageDisplay(const PageIndices&, long);
 		bool TryGetIndicesForDisplayPage(long, PageIndices&) const;
 		void SetupDisplayThreadDataForSelectedStory(const std::size_t);
 		void OnFetchStoryComplete(Story, size_t);

@@ -39,6 +39,7 @@ namespace hackernewscmd {
 		struct DisplayPageData {
 			std::vector<StoryAndStatus>::const_iterator begin;
 			std::vector<StoryAndStatus>::const_iterator end;
+			unsigned currentPage, totalPages;
 		};
 
 		template<Action A, typename T>

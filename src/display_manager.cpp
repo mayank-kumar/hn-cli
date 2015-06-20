@@ -82,6 +82,7 @@ namespace hackernewscmd {
 				if (shouldRedo) {
 					break;
 				}
+				mInteract.ShowPagePosition(data->currentPage, data->totalPages);
 				if (mToBeSelectedStory == nullptr) {
 					mToBeSelectedStory = mCurrentlySelectedStory;
 				}
@@ -89,15 +90,15 @@ namespace hackernewscmd {
 				mCurrentlySelectedStory = mToBeSelectedStory;
 				break;
 			}
-			case DisplayThreadData::SelectStory: {
-				auto data = mThreadData->GetActionData<DisplayThreadData::SelectStory, Story>();
+			case DTD::SelectStory: {
+				auto data = mThreadData->GetActionData<DTD::SelectStory, Story>();
 				if (mDisplayData.count(data->id)) {
 					mInteract.SwapSelectedStories(mDisplayData[mCurrentlySelectedStory->id], mDisplayData[data->id]);
 					mCurrentlySelectedStory = data;
 				}
 				break;
 			}
-			case DisplayThreadData::Quit:
+			case DTD::Quit:
 				mLock.unlock();
 				return;
 			default:

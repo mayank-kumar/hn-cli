@@ -65,7 +65,8 @@ namespace hackernewscmd {
 		TryGetIndicesForDisplayPage(0, indices); // First page, no need to check for result
 		FetchDisplayPage(indices);
 
-		SetupDisplayThreadDataForPageDisplay(indices);
+		SetupDisplayThreadDataForPageDisplay(indices, 1);
+		mDisplayPageData.totalPages = (mTopStories.size() - 1) / kDisplayPageSize;
 		mDisplayManager->Go(mDisplayCV, *(mDisplayLock.mutex()), mDisplayThreadData, mDisplayReverseCV);
 	}
 
@@ -156,7 +157,7 @@ namespace hackernewscmd {
 
 		if (TryGetIndicesForDisplayPage(page, indices)) {
 			FetchDisplayPage(indices);
-			DisplayPage(indices);
+			DisplayPage(indices, page);
 			mCurrentDisplayPage = page;
 			SelectStory(indices.first, false);
 		}
@@ -215,17 +216,18 @@ namespace hackernewscmd {
 		std::async(&NewsFetcher::FetchStories, mFetcher, ftd);
 	}
 
-	void StateManager::DisplayPage(const PageIndices& indices) {
-		SetupDisplayThreadDataForPageDisplay(indices);
+	void StateManager::DisplayPage(const PageIndices& indices, const long pageIndex) {
+		SetupDisplayThreadDataForPageDisplay(indices, pageIndex + 1);
 		mDisplayCV.notify_all();
 	}
 
-	void StateManager::SetupDisplayThreadDataForPageDisplay(const PageIndices& indices) {
+	void StateManager::SetupDisplayThreadDataForPageDisplay(const PageIndices& indices, const long currentPage) throw() {
 		mDisplayLock.lock();
 		mDisplayThreadData.redo = true;
 		mDisplayThreadData.action = DisplayThreadData::DisplayPage;
 		mDisplayPageData.begin = mPagedDisplayBuffer.cbegin() + indices.first;
 		mDisplayPageData.end = mPagedDisplayBuffer.cbegin() + indices.second;
+		mDisplayPageData.currentPage = currentPage;
 		mDisplayThreadData.SetPointer(&mDisplayPageData);
 		mDisplayLock.unlock();
 	}

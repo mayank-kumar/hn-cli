@@ -80,6 +80,11 @@ namespace hackernewscmd {
 		return ShowStoryInternal(title, score, host, comments);
 	}
 
+	void Interact::ShowPagePosition(const long currentPage, const long totalPages) const {
+		PrintLineWithinCols(L"Page " + std::to_wstring(currentPage) + L" of " + std::to_wstring(totalPages),
+			mNextRow, 0, mBufferSize.X - 1, true);
+	}
+
 	void Interact::SwapSelectedStories(const StoryDisplayData& prev, const StoryDisplayData& curr) const {
 		// Move asterisk
 		unsigned long charsWritten;
@@ -256,7 +261,7 @@ namespace hackernewscmd {
 		}
 	}
 
-	short Interact::PrintLineWithinCols(const std::wstring& line, short row, short left, short right) const {
+	short Interact::PrintLineWithinCols(const std::wstring& line, short row, short left, short right, bool shouldCenter) const {
 		assert(left <= right);
 
 		if (!line.length()) {
@@ -274,8 +279,9 @@ namespace hackernewscmd {
 
 		for (std::size_t i = 0; i < line.length(); i += width, ++row) {
 			auto length = std::min(i + width, line.length()) - i;
+			auto leftAdjustment = shouldCenter ? (width - length) / 2 : 0;
 			unsigned long charsWritten;
-			if (!::WriteConsoleOutputCharacterW(mOutputHandle, line.c_str() + i, length, { left, row }, &charsWritten)) {
+			if (!::WriteConsoleOutputCharacterW(mOutputHandle, line.c_str() + i, length, { left + leftAdjustment, row }, &charsWritten)) {
 				throw std::runtime_error("Couldn't write characters");
 			}
 		}

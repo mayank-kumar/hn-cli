@@ -180,7 +180,7 @@ namespace hackernewscmd {
 		} else if (mCurrentSelectedStoryIndex >= indices.first && mCurrentSelectedStoryIndex < indices.second) {
 			// Don't move the selection if there'll be no indication on the console
 			for (auto it = mPagedDisplayBuffer.cbegin() + indices.first; it != mPagedDisplayBuffer.cbegin() + indices.second; ++it) {
-				if (it->second != StoryLoadStatus::Completed) {
+				if (it->second.loadStatus != StoryLoadStatus::Completed) {
 					return;
 				}
 			}
@@ -207,12 +207,20 @@ namespace hackernewscmd {
 		std::vector<std::pair<StoryId, size_t>> toBeLoadedTopStories;
 
 		for (auto startIndex = indices.first; startIndex < indices.second; ++startIndex) {
-			if (mPagedDisplayBuffer[startIndex].second == StoryLoadStatus::NotStarted) {
+			auto& loadStatus = mPagedDisplayBuffer[startIndex].second.loadStatus;
+			auto expectedNotStarted = StoryLoadStatus::NotStarted, expectedFailed = StoryLoadStatus::Failed;
+			if (loadStatus != StoryLoadStatus::Completed
+				&& loadStatus != StoryLoadStatus::Started
+				&& (loadStatus.compare_exchange_strong(expectedNotStarted, StoryLoadStatus::Started)
+					|| loadStatus.compare_exchange_strong(expectedFailed, StoryLoadStatus::Started))) {
 				toBeLoadedTopStories.push_back(std::make_pair(mTopStories[startIndex], startIndex));
 			}
 		}
 
-		auto ftd = new FetchThreadData(std::move(toBeLoadedTopStories), std::move(std::bind(&StateManager::OnFetchStoryComplete, this, std::placeholders::_1, std::placeholders::_2)));
+		auto ftd = new FetchThreadData(
+			std::move(toBeLoadedTopStories),
+			std::move(std::bind(&StateManager::OnFetchStoryComplete, this, std::placeholders::_1, std::placeholders::_2)),
+			std::move(std::bind(&StateManager::OnFetchStoryFailed, this, std::placeholders::_1)));
 		std::async(&NewsFetcher::FetchStories, mFetcher, ftd);
 	}
 
@@ -252,10 +260,13 @@ namespace hackernewscmd {
 	}
 
 	void StateManager::OnFetchStoryComplete(Story story, size_t index) {
-		if (mPagedDisplayBuffer[index].second != StoryLoadStatus::Completed) {
-			mPagedDisplayBuffer[index].first = std::move(story);
-			mPagedDisplayBuffer[index].second = StoryLoadStatus::Completed;
-			mDisplayCV.notify_all();
-		}
+		mPagedDisplayBuffer[index].first = std::move(story);
+		mPagedDisplayBuffer[index].second.loadStatus = StoryLoadStatus::Completed;
+		mDisplayCV.notify_all();
+	}
+
+	void StateManager::OnFetchStoryFailed(size_t index) {
+		mPagedDisplayBuffer[index].second.loadStatus = StoryLoadStatus::Failed;
+		mDisplayCV.notify_all();
 	}
 } // namespace hackernewscmd

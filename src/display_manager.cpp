@@ -66,14 +66,18 @@ namespace hackernewscmd {
 				auto data = mThreadData->GetActionData<DTD::DisplayPage, DTD::DisplayPageData>();
 				mCurrentlySelectedStory = &data->begin->first;
 				for (auto iter = data->begin; iter != data->end; ++iter) {
-					while (iter->second != StoryLoadStatus::Completed) {
+					while (iter->second.loadStatus != StoryLoadStatus::Completed
+						&& iter->second.loadStatus != StoryLoadStatus::Failed) {
 						mCV->wait(mLock);
 					}
 					if (TryReadNewInstruction() && (shouldRedo = ShouldBreak()) == true) {
 						break;
 					}
 					auto& story = iter->first;
-					if (mShouldDisplayCommentCount) {
+					if (iter->second.loadStatus == StoryLoadStatus::Failed) {
+						mInteract.ShowFailedStory();
+					}
+					else if (mShouldDisplayCommentCount) {
 						mDisplayData[story.id] = mInteract.ShowStory(story.title, story.score, GetHostNameFromUrl(story.url), story.descendants);
 					} else {
 						mDisplayData[story.id] = mInteract.ShowStory(story.title, story.score, GetHostNameFromUrl(story.url));

@@ -62,7 +62,8 @@ namespace hackernewscmd {
 		return topStoryIds;
 	}
 
-	void NewsFetcher::FetchStories(const FetchThreadData* threadData) {
+	void NewsFetcher::FetchStories(const FetchThreadData* ftd) {
+		std::unique_ptr<const FetchThreadData> threadData(ftd);
 		PTP_CALLBACK_ENVIRON cbe = GetThreadpoolCallbackEnvironment();
 		PTP_CLEANUP_GROUP cug = ::CreateThreadpoolCleanupGroup();
 		::SetThreadpoolCallbackCleanupGroup(cbe, cug, NULL);
@@ -70,14 +71,14 @@ namespace hackernewscmd {
 		PTP_WORK work = NULL;
 
 		for (const auto& item : threadData->ToBeLoaded) {
-			td = new ThreadData(this, item.first, item.second, &threadData->OnFetchComplete);
+			td = new ThreadData(this, item.first, item.second, &threadData->OnFetchComplete, &threadData->OnFetchFailed);
 			if ((work = ::CreateThreadpoolWork(ThreadCallback, td, cbe)) == NULL) {
-				throw std::runtime_error("CreateThreadpoolWork failed");
+				threadData->OnFetchFailed(item.second);
+				continue;
 			}
 			::SubmitThreadpoolWork(work);
 		}
 		::CloseThreadpoolCleanupGroupMembers(cug, FALSE, NULL);
-		delete threadData;
 	}
 
 	HINTERNET NewsFetcher::GetInternetHandle() {
@@ -132,11 +133,13 @@ namespace hackernewscmd {
 		NewsFetcher* nf,
 		const StoryId sid,
 		const std::size_t idx,
-		const std::function<void(Story, std::size_t)>* cbk) :
+		const std::function<void(Story, std::size_t)>* success,
+		const std::function<void(std::size_t)>* failure) :
 		fetcher(nf),
 		storyId(sid),
 		index(idx),
-		callback(cbk) {}
+		successCallback(success),
+		failureCallback(failure) {}
 
 	void CALLBACK NewsFetcher::ThreadCallback(PTP_CALLBACK_INSTANCE, void *context, PTP_WORK) {
 		std::unique_ptr<ThreadData> td(static_cast<ThreadData *>(context));
@@ -145,15 +148,19 @@ namespace hackernewscmd {
 		auto retriesLeft = 3;
 		rapidjson::GenericDocument<rapidjson::UTF16<>> document;
 		while (retriesLeft--) {
+			std::vector<wchar_t> json;
 			try {
-				auto json = td->fetcher->FetchUrl(kBaseUrl + "/item/" + itemId + ".json");
-				if (document.Parse(&json[0]).HasParseError()) {
-					throw std::runtime_error("Error while parsing JSON for item " + itemId);
-				}
+				json = td->fetcher->FetchUrl(kBaseUrl + "/item/" + itemId + ".json");
+			} catch (const std::runtime_error&) {
+				continue;
+			}
+			if (!document.Parse(&json[0]).HasParseError()) {
 				break;
-			} catch (const std::runtime_error&) { }
+			}
+			retriesLeft = 0;
 		}
 		if (retriesLeft == -1) {
+			(*td->failureCallback)(td->index);
 			return;
 		}
 		Story story;
@@ -167,6 +174,6 @@ namespace hackernewscmd {
 		story.time = document[L"time"].GetInt64();
 		story.by = document[L"by"].GetString();
 
-		(*td->callback)(story, td->index);
+		(*td->successCallback)(story, td->index);
 	}
 } // namespace hackernewscmd

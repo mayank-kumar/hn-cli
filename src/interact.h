@@ -66,6 +66,7 @@ namespace hackernewscmd {
 		StoryDisplayData ShowStory(const std::wstring&, const unsigned, const std::wstring&, const unsigned) const;
 
 		void ShowPagePosition(long currentPage, long totalPages) const;
+		void ShowFailedStory() const;
 
 		void SwapSelectedStories(const StoryDisplayData&, const StoryDisplayData&) const;
 		void ClearScreen() const;

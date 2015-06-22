@@ -89,6 +89,7 @@ namespace hackernewscmd {
 		bool TryGetIndicesForDisplayPage(long, PageIndices&) const;
 		void SetupDisplayThreadDataForSelectedStory(const std::size_t);
 		void OnFetchStoryComplete(Story, size_t);
+		void OnFetchStoryFailed(size_t);
 
 		static std::unique_ptr<StateManager> mInstance;
 		static const std::size_t kDisplayPageSize = 10;

@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <string>
 #include <utility>
@@ -44,5 +45,18 @@ namespace hackernewscmd {
 		std::wstring by;
 	}; // struct Story
 
-	using StoryAndStatus = std::pair < Story, StoryLoadStatus >;
+	struct StoryStatus {
+		std::atomic<StoryLoadStatus> loadStatus;
+		bool isSkipped;
+
+		StoryStatus() :
+			loadStatus(StoryLoadStatus::NotStarted),
+			isSkipped(false) {};
+
+		StoryStatus(const StoryStatus& other) :
+			loadStatus(other.loadStatus.load()),
+			isSkipped(other.isSkipped) {};
+	};
+
+	using StoryAndStatus = std::pair < Story, StoryStatus >;
 } // namespace hackernewscmd

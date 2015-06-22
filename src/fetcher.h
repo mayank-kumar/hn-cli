@@ -34,10 +34,12 @@ namespace hackernewscmd {
 	struct FetchThreadData {
 		const std::vector<std::pair<StoryId, size_t>> ToBeLoaded;
 		const std::function<void(Story, size_t)> OnFetchComplete;
+		const std::function<void(size_t)> OnFetchFailed;
 
-		FetchThreadData(decltype(ToBeLoaded) && toBeLoaded, decltype(OnFetchComplete)&& onFetchComplete) :
+		FetchThreadData(decltype(ToBeLoaded) && toBeLoaded, decltype(OnFetchComplete)&& onFetchComplete, decltype(OnFetchFailed) onFetchFailed) :
 			ToBeLoaded(std::move(toBeLoaded)),
-			OnFetchComplete(std::move(onFetchComplete)) {};
+			OnFetchComplete(std::move(onFetchComplete)),
+			OnFetchFailed(std::move(onFetchFailed)) {};
 		FetchThreadData& operator=(const FetchThreadData&) = delete;
 	};
 
@@ -62,13 +64,19 @@ namespace hackernewscmd {
 
 		// Threadpool related
 		struct ThreadData {
-			ThreadData(NewsFetcher*, const StoryId, const std::size_t, const std::function<void(Story, std::size_t)>*);
+			ThreadData(
+				NewsFetcher*,
+				const StoryId,
+				const std::size_t,
+				const std::function<void(Story, std::size_t)>*,
+				const std::function<void(std::size_t)>*);
 			ThreadData& operator=(const ThreadData&) = delete;
 
 			NewsFetcher* fetcher;
 			const StoryId storyId;
 			const std::size_t index;
-			const std::function<void(Story, std::size_t)> *callback;
+			const std::function<void(Story, std::size_t)> *successCallback;
+			const std::function<void(std::size_t)> *failureCallback;
 		};
 		static void CALLBACK ThreadCallback(PTP_CALLBACK_INSTANCE, void*, PTP_WORK);
 	};

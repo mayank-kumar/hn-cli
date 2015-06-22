@@ -85,8 +85,11 @@ namespace hackernewscmd {
 			mNextRow, 0, mBufferSize.X - 1, true);
 	}
 
-	void Interact::ShowFailedStory() const {
+	StoryDisplayData Interact::ShowFailedStory() const {
+		StoryDisplayData sdd = GetStoryDisplayDataStartingAtNextRow();
 		mNextRow = PrintLineWithinCols(L"-- Story download failed --", mNextRow, 2, mBufferSize.X - 1) + 1;
+		sdd.margin.Bottom = sdd.text.Bottom = mNextRow - 2;
+		return sdd;
 	}
 
 	void Interact::SwapSelectedStories(const StoryDisplayData& prev, const StoryDisplayData& curr) const {
@@ -98,15 +101,22 @@ namespace hackernewscmd {
 		}
 
 		// Recolor
+
 		SMALL_RECT rect = prev.text;
-		rect.Bottom = prev.addendum.Bottom;
+		if (prev.addendum.Bottom != -1) {
+			rect.Bottom = prev.addendum.Bottom;
+		}
 		ChangeBufferAttributes(rect, mBufferAttributes);
 		rect = curr.text;
-		rect.Bottom = curr.addendum.Bottom;
+		if (curr.addendum.Bottom != -1) {
+			rect.Bottom = curr.addendum.Bottom;
+		}
 		ChangeBufferAttributes(rect, mSelectedStoryAttributes);
 
 		// Scroll
-		if (!::SetConsoleCursorPosition(mOutputHandle, { 0, curr.addendum.Bottom })
+
+		auto bottom = curr.addendum.Bottom == -1 ? curr.text.Bottom : curr.addendum.Bottom;
+		if (!::SetConsoleCursorPosition(mOutputHandle, { 0, bottom })
 			|| !::SetConsoleCursorPosition(mOutputHandle, { 0, curr.text.Top })) {
 			throw std::runtime_error("Couldn't move cursor to location of story");
 		}
@@ -212,22 +222,18 @@ namespace hackernewscmd {
 	}
 
 	StoryDisplayData Interact::ShowStoryInternal(const std::wstring& title, const unsigned score, const std::wstring& hostname, const long comments) const {
-		StoryDisplayData sdd;
-
 		CONSOLE_SCREEN_BUFFER_INFO csbi;
 		if (::GetConsoleScreenBufferInfo(mOutputHandle, &csbi) == 0) {
 			throw std::runtime_error("Couldn't load screen buffer info");
 		}
 
-		sdd.margin.Top = sdd.text.Top = mNextRow;
-		sdd.margin.Left = 0;
-		sdd.margin.Right = 1;
-		sdd.text.Left = sdd.addendum.Left = 2;
-		sdd.text.Right = sdd.addendum.Right = mBufferSize.X;
+		StoryDisplayData sdd = GetStoryDisplayDataStartingAtNextRow();
 
 		mNextRow = PrintLineWithinCols(title, mNextRow, 2, mBufferSize.X - 1);
 		sdd.text.Bottom = mNextRow - 1;
 
+		sdd.addendum.Left = sdd.text.Left;
+		sdd.addendum.Right = sdd.text.Right;
 		sdd.addendum.Top = mNextRow;
 		auto addendum = L'[' + std::to_wstring(score) + L"] " + hostname;
 		if (comments > 0) {
@@ -290,6 +296,17 @@ namespace hackernewscmd {
 			}
 		}
 		return row;
+	}
+
+	StoryDisplayData Interact::GetStoryDisplayDataStartingAtNextRow() const {
+		StoryDisplayData ret;
+		ret.addendum = ret.margin = ret.text = { -1, -1, -1, -1 };
+		ret.margin.Top = ret.text.Top = mNextRow;
+		ret.margin.Left = 0;
+		ret.margin.Right = 1;
+		ret.text.Left = 2;
+		ret.text.Right = mBufferSize.X - 1;
+		return ret;
 	}
 
 	std::unique_ptr<Interact> Interact::mInstance = nullptr;

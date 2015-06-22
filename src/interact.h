@@ -66,7 +66,7 @@ namespace hackernewscmd {
 		StoryDisplayData ShowStory(const std::wstring&, const unsigned, const std::wstring&, const unsigned) const;
 
 		void ShowPagePosition(long currentPage, long totalPages) const;
-		void ShowFailedStory() const;
+		StoryDisplayData ShowFailedStory() const;
 
 		void SwapSelectedStories(const StoryDisplayData&, const StoryDisplayData&) const;
 		void ClearScreen() const;
@@ -80,6 +80,7 @@ namespace hackernewscmd {
 		StoryDisplayData ShowStoryInternal(const std::wstring&, const unsigned, const std::wstring&, const long) const;
 		short PrintLineWithinCols(const std::wstring&, short, short, short, bool = false) const;
 		void ChangeBufferAttributes(const SMALL_RECT&, unsigned short) const;
+		StoryDisplayData GetStoryDisplayDataStartingAtNextRow() const;
 
 		HANDLE mInputHandle;
 		HANDLE mOutputHandle;

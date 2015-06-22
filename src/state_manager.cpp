@@ -57,6 +57,9 @@ namespace hackernewscmd {
 		DiffTopStories();
 
 		mPagedDisplayBuffer.resize(mTopStories.size());
+		for (std::size_t i = 0; i < mTopStories.size(); ++i) {
+			mPagedDisplayBuffer[i].first.id = mTopStories[i];
+		}
 
 		mCurrentDisplayPage = 0;
 		mCurrentSelectedStoryIndex = 0;
@@ -180,7 +183,8 @@ namespace hackernewscmd {
 		} else if (mCurrentSelectedStoryIndex >= indices.first && mCurrentSelectedStoryIndex < indices.second) {
 			// Don't move the selection if there'll be no indication on the console
 			for (auto it = mPagedDisplayBuffer.cbegin() + indices.first; it != mPagedDisplayBuffer.cbegin() + indices.second; ++it) {
-				if (it->second.loadStatus != StoryLoadStatus::Completed) {
+				if (it->second.loadStatus != StoryLoadStatus::Completed
+					&& it->second.loadStatus != StoryLoadStatus::Failed) {
 					return;
 				}
 			}

@@ -75,7 +75,7 @@ namespace hackernewscmd {
 					}
 					auto& story = iter->first;
 					if (iter->second.loadStatus == StoryLoadStatus::Failed) {
-						mInteract.ShowFailedStory();
+						mDisplayData[story.id] = mInteract.ShowFailedStory();
 					}
 					else if (mShouldDisplayCommentCount) {
 						mDisplayData[story.id] = mInteract.ShowStory(story.title, story.score, GetHostNameFromUrl(story.url), story.descendants);
